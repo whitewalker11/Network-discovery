@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Observability — Edge Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+ --bg:#f2f5f3;--surface:#fff;--ink:#14211a;--ink2:#3f4c44;--muted:#66726a;--line:#dfe6e1;--line2:#edf1ee;
+ --green:#15803d;--green-d:#166534;--green-l:#dcfce7;--green-50:#f0fdf4;--green-line:#bfe6cb;--green-dot:#16a34a;
+ --amber:#b45309;--amber-l:#fef3c7;--amber-dot:#d97706;
+ --red:#b91c1c;--red-l:#fee2e2;--red-dot:#dc2626;
+ --sans:"IBM Plex Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+ --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 13px/1.5 var(--sans);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+h1,h2,h3,p{margin:0}
+:focus-visible{outline:2px solid var(--green);outline-offset:2px;border-radius:6px}
+.skip{position:absolute;left:12px;top:-48px;background:var(--ink);color:#fff;padding:8px 12px;border-radius:8px;z-index:100}
+.skip:focus{top:12px}
+.mono{font-family:var(--mono);font-size:12px}
+.ico{flex:none}
+
+/* ---------- Shell ---------- */
+.sidebar{position:fixed;inset:0 auto 0 0;width:232px;background:#fff;border-right:1px solid var(--line);z-index:30;display:flex;flex-direction:column;overflow-y:auto}
+.brand{height:64px;padding:0 18px;border-bottom:1px solid var(--line2);display:flex;align-items:center;gap:11px;flex:none}
+.logo{width:34px;height:34px;border-radius:9px;background:var(--green);color:#fff;display:grid;place-items:center}
+.brand b{display:block;font-size:14px;font-weight:600;line-height:1.2}
+.brand small{display:block;color:var(--muted);font-size:11px}
+.nav{padding:8px 10px 20px}
+.nav-group{font-size:12px;font-weight:500;color:var(--muted);margin:16px 10px 6px}
+.nav-item{width:100%;height:36px;border:0;background:none;border-radius:8px;padding:0 10px;display:flex;align-items:center;gap:11px;color:var(--ink2);text-align:left;transition:background .15s}
+.nav-item:hover{background:#f3f6f4}
+.nav-item[aria-current="page"]{background:var(--green-l);color:var(--green-d);font-weight:600}
+.main{margin-left:232px}
+.topbar{height:64px;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 28px;position:sticky;top:0;z-index:20}
+.page-title{font-size:16px;font-weight:600;line-height:1.3}
+.page-sub{font-size:12px;color:var(--muted)}
+.top-actions{display:flex;gap:12px;align-items:center}
+.search{position:relative;display:flex;align-items:center}
+.search svg{position:absolute;left:11px;color:var(--muted);pointer-events:none}
+.search input{width:280px;height:36px;border:1px solid var(--line);border-radius:8px;padding:0 34px 0 34px;background:#fff;outline:none}
+.search input:focus{border-color:var(--green-dot);box-shadow:0 0 0 3px rgba(22,163,74,.14)}
+.search kbd{position:absolute;right:9px;font:500 11px var(--mono);color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:0 5px;background:#f8faf9}
+.health{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:999px;padding:7px 13px;font-size:12px;font-weight:500;background:var(--green-l);color:var(--green-d)}
+.health i{width:7px;height:7px;border-radius:50%;background:currentColor}
+.health.bad{background:var(--red-l);color:var(--red)}
+.content{max-width:1640px;margin:0 auto;padding:26px 28px 56px}
+
+/* ---------- Generic ---------- */
+.hero{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.hero h1{font-size:24px;font-weight:600;letter-spacing:-.01em}
+.hero p{color:var(--muted);margin-top:4px;font-size:13px}
+.hero-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{height:36px;border:1px solid var(--line);background:#fff;border-radius:8px;padding:0 14px;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:8px;transition:background .15s,border-color .15s}
+.btn:hover{background:#f6f9f7;border-color:#cfd9d3}
+.btn.primary{background:var(--green);border-color:var(--green);color:#fff}
+.btn.primary:hover{background:var(--green-d)}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+.btn.sm{height:30px;padding:0 11px;font-size:12px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;background:#fff;padding:2px}
+.seg button{border:0;background:none;height:30px;padding:0 12px;border-radius:6px;font-size:12px;font-weight:500;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--green-l);color:var(--green-d)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;scroll-margin-top:84px}
+.panel-head{padding:15px 18px;border-bottom:1px solid var(--line2);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.panel-title{font-size:14px;font-weight:600}
+.panel-desc{font-size:12px;color:var(--muted);margin-top:1px}
+.panel-body{padding:18px}
+.strip{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:16px}
+.cell{background:#fff;padding:16px 18px}
+.cell-label{color:var(--muted);font-size:12px}
+.cell-value{font-size:28px;font-weight:600;letter-spacing:-.02em;line-height:1.15;margin-top:6px}
+.cell-note{font-size:12px;margin-top:4px;color:var(--muted)}
+.cell-note.up{color:var(--green-d)}.cell-note.bad{color:var(--red)}.cell-note.warn{color:var(--amber)}
+.section-title{font-size:14px;font-weight:600;margin:24px 0 10px}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap}
+.badge i{width:6px;height:6px;border-radius:50%;background:currentColor}
+.badge.ok{background:var(--green-l);color:var(--green-d)}
+.badge.warn{background:var(--amber-l);color:var(--amber)}
+.badge.bad{background:var(--red-l);color:var(--red)}
+.badge.neutral{background:#eef1ef;color:var(--ink2)}
+.empty{padding:22px 18px;color:var(--muted);text-align:center}
+.grid2{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(300px,.85fr);gap:16px;margin-bottom:0}
+.spark{display:block;width:100%}
+
+/* ---------- Topology ---------- */
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);align-items:center}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.d{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green-dot)}
+.d.warn{background:var(--amber-dot)}.d.bad{background:var(--red-dot)}
+.topo-scroll{overflow-x:auto}
+.topo{position:relative;height:392px;min-width:640px;background-image:radial-gradient(#d9e3dc 1px,transparent 1px);background-size:22px 22px}
+.topo-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.edge{fill:none;stroke:#86cf9d;stroke-width:2;stroke-dasharray:6 7;animation:flow 1.3s linear infinite}
+.edge.warn{stroke:var(--amber-dot)}
+@keyframes flow{to{stroke-dashoffset:-13}}
+.node{position:absolute;transform:translateX(-50%);width:120px;padding:10px 8px;border:1px solid var(--line);border-radius:10px;background:#fff;display:flex;flex-direction:column;align-items:center;gap:1px;box-shadow:0 1px 2px rgba(20,33,26,.07);transition:border-color .15s,opacity .2s}
+.node:hover{border-color:var(--green-dot)}
+.node.sm{width:108px;padding:8px}
+.node .ico-wrap{color:var(--green);display:flex}
+.node-name{font-weight:600;font-size:12px}
+.node-sub{font-size:11px;color:var(--muted);display:inline-flex;align-items:center;gap:5px}
+.node.degraded{border-color:var(--amber-dot)}
+.node.degraded .ico-wrap{color:var(--amber)}
+.node.degraded::after{content:"";position:absolute;inset:-5px;border-radius:14px;border:2px solid var(--amber-dot);opacity:0;animation:ring 2.4s ease-out infinite;pointer-events:none}
+@keyframes ring{0%{opacity:.6;transform:scale(.97)}100%{opacity:0;transform:scale(1.08)}}
+.node.dim{opacity:.3}
+
+/* ---------- Incidents ---------- */
+.incident{width:100%;display:flex;align-items:flex-start;gap:12px;text-align:left;padding:13px 18px;border:0;border-bottom:1px solid var(--line2);background:none;transition:background .15s}
+.incident:hover{background:#f8fbf9}
+.sev{width:8px;height:8px;border-radius:50%;margin-top:6px;flex:none}
+.sev.critical{background:var(--red-dot)}.sev.warning{background:var(--amber-dot)}
+.inc-main{flex:1;min-width:0;display:flex;flex-direction:column}
+.inc-title{font-weight:500}
+.inc-meta{display:flex;gap:12px;color:var(--muted);font-size:12px}
+.note{margin:14px 18px 18px;padding:10px 12px;background:#f6f9f7;border-radius:8px;color:var(--muted);font-size:12px;display:flex;gap:8px;align-items:center}
+.note svg{color:var(--green)}
+
+/* ---------- Resources ---------- */
+.res-label{display:flex;justify-content:space-between;color:var(--muted);font-size:12px}
+.res-value{font-size:22px;font-weight:600;margin:4px 0 8px;letter-spacing:-.01em}
+.res-delta.up{color:var(--green-d)}.res-delta.down{color:var(--red)}
+
+/* ---------- Insight ---------- */
+.insight{border-color:var(--green-line);background:linear-gradient(180deg,#f6fdf8,#fff 60%);margin-top:16px;padding:20px}
+.tag{display:inline-flex;align-items:center;gap:6px;background:var(--green-l);color:var(--green-d);font-size:12px;font-weight:600;padding:3px 9px;border-radius:6px}
+.insight h2{font-size:17px;font-weight:600;margin:12px 0 6px;max-width:760px;letter-spacing:-.01em}
+.insight>p{color:var(--ink2);max-width:760px;font-size:13px}
+.chain{display:grid;grid-template-columns:repeat(4,1fr);gap:28px;margin:18px 0}
+.stage{position:relative;background:#fff;border:1px solid var(--green-line);border-radius:10px;padding:12px 14px}
+.stage:not(:last-child)::after{content:"→";position:absolute;right:-22px;top:50%;transform:translateY(-50%);color:var(--green);font-weight:600}
+.stage-label{font-size:12px;color:var(--muted)}
+.stage-value{font-size:20px;font-weight:600;margin:2px 0}
+.stage-delta{font-size:12px;color:var(--amber);margin-bottom:6px}
+.stage-delta.flat{color:var(--muted)}
+.insight .actions{display:flex;gap:10px;flex-wrap:wrap}
+
+/* ---------- Tables ---------- */
+.table-wrap{overflow-x:auto}
+.table{width:100%;border-collapse:collapse;min-width:640px}
+.table th{text-align:left;color:var(--muted);font-size:12px;font-weight:500;padding:10px 18px;background:#fafbfa;border-bottom:1px solid var(--line2);white-space:nowrap}
+.table td{padding:12px 18px;border-bottom:1px solid var(--line2);vertical-align:middle}
+.table tbody tr:last-child td{border-bottom:0}
+.table tbody tr[data-ent]{cursor:pointer}
+.table tbody tr:hover td{background:#fafdfb}
+.table .num{text-align:right}
+.dev{display:flex;gap:11px;align-items:center}
+.dev-icon{width:32px;height:32px;border-radius:8px;background:var(--green-l);color:var(--green-d);display:grid;place-items:center;flex:none}
+.dev b,.dev button{font-weight:600}
+.dev small{display:block;color:var(--muted);font-size:12px}
+.linklike{border:0;background:none;padding:0;text-align:left;font-weight:600}
+.linklike:hover{color:var(--green-d);text-decoration:underline}
+.minibar{display:flex;align-items:center;gap:8px}
+.minibar i{display:block;height:5px;width:56px;background:#e8eeea;border-radius:9px;overflow:hidden;position:relative}
+.minibar i::after{content:"";position:absolute;inset:0;width:var(--w);background:var(--green-dot);border-radius:9px}
+.minibar i.warn::after{background:var(--amber-dot)}
+.chips{display:flex;gap:8px;padding:12px 18px;border-bottom:1px solid var(--line2)}
+.chip{border:1px solid var(--line);background:#fff;border-radius:999px;height:30px;padding:0 13px;font-size:12px;font-weight:500;color:var(--ink2)}
+.chip[aria-pressed="true"]{background:var(--green-l);border-color:var(--green-line);color:var(--green-d)}
+.table-foot{padding:12px 18px;color:var(--muted);font-size:12px;border-top:1px solid var(--line2)}
+
+/* ---------- Discovery ---------- */
+.workflow{display:grid;grid-template-columns:repeat(4,1fr);margin:0 0 20px}
+.step{position:relative;text-align:center;padding:2px 6px}
+.step::after{content:"";position:absolute;height:2px;background:var(--line);top:14px;left:calc(50% + 20px);right:calc(-50% + 20px)}
+.step:last-child::after{display:none}
+.step.done::after{background:var(--green-dot)}
+.circle{width:28px;height:28px;border-radius:50%;border:2px solid var(--line);background:#fff;color:var(--muted);display:grid;place-items:center;margin:0 auto;font-weight:600;font-size:12px;position:relative;z-index:1}
+.step.active .circle{border-color:var(--green);background:var(--green);color:#fff}
+.step.done .circle{border-color:var(--green-dot);background:var(--green-l);color:var(--green-d)}
+.step b{display:block;margin-top:7px;font-weight:600}
+.step small{color:var(--muted);font-size:12px}
+.scan-box{border:1px solid var(--line);border-radius:10px;padding:16px}
+.scan-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.progress{height:8px;background:#e8eeea;border-radius:99px;overflow:hidden;margin:14px 0 8px}
+.progress div{height:100%;width:0;background:var(--green-dot);border-radius:99px;transition:width .2s}
+.scan-meta{display:flex;justify-content:space-between;color:var(--muted);font-size:12px}
+.found-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:22px 0 10px;flex-wrap:wrap}
+.cb{width:16px;height:16px;accent-color:var(--green)}
+.why{display:block;color:var(--amber);font-size:12px}
+.done-banner{display:flex;gap:12px;align-items:center;justify-content:space-between;background:var(--green-50);border:1px solid var(--green-line);border-radius:10px;padding:12px 14px;margin-top:16px;flex-wrap:wrap}
+
+/* ---------- Stub ---------- */
+.stub{display:grid;place-items:center;text-align:center;min-height:52vh;gap:6px}
+.stub .big{width:56px;height:56px;border-radius:14px;background:var(--green-l);color:var(--green-d);display:grid;place-items:center;margin:0 auto 10px}
+.stub h1{font-size:20px;font-weight:600}
+.stub p{color:var(--muted);max-width:420px;margin:0 auto 12px}
+
+/* ---------- Drawer ---------- */
+.mask{position:fixed;inset:0;background:rgba(15,23,20,.28);z-index:40}
+.drawer{position:fixed;right:0;top:0;bottom:0;width:440px;max-width:100%;background:#fff;z-index:41;transform:translateX(100%);visibility:hidden;transition:transform .25s ease,visibility .25s;box-shadow:-14px 0 36px rgba(0,0,0,.12);overflow-y:auto;outline:none}
+.drawer.open{transform:none;visibility:visible}
+.drawer-head{padding:16px 22px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:#fff;z-index:1}
+.drawer-head h2{font-size:14px;font-weight:600}
+.icon-btn{width:32px;height:32px;border:0;background:none;border-radius:8px;font-size:22px;line-height:1;color:var(--ink2)}
+.icon-btn:hover{background:#f1f4f2}
+.drawer-body{padding:22px}
+.profile{display:flex;gap:13px;align-items:center}
+.profile-icon{width:48px;height:48px;border-radius:12px;background:var(--green-l);color:var(--green-d);display:grid;place-items:center}
+.profile-icon.warn{background:var(--amber-l);color:var(--amber)}
+.profile b{display:block;font-size:16px;font-weight:600;line-height:1.25}
+.profile small{color:var(--muted);font-size:12px}
+.d-section{margin-top:24px}
+.d-label{font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:8px}
+.d-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:6px 0}
+.d-row span:first-child{color:var(--muted)}
+.d-row b{font-weight:500}
+.d-row b small{color:var(--muted);font-weight:400;margin-left:6px}
+.d-row .warn{color:var(--amber)}
+.mini{height:5px;background:#e8eeea;border-radius:9px;overflow:hidden;margin:0 0 6px}
+.mini i{display:block;height:100%;background:var(--green-dot);border-radius:9px}
+.mini i.warn{background:var(--amber-dot)}
+.analysis{background:var(--green-50);border:1px solid var(--green-line);border-radius:10px;padding:14px}
+.analysis b{display:block;margin-bottom:4px}
+.analysis p{color:var(--ink2)}
+.analysis small{display:block;margin-top:8px;color:var(--muted)}
+.analysis.plain{background:#f6f9f7;border-color:var(--line);color:var(--muted)}
+.drawer-actions{margin-top:24px;display:flex;gap:10px;flex-wrap:wrap}
+
+/* ---------- Toast ---------- */
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,16px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:60}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* ---------- Responsive ---------- */
+@media(max-width:1180px){
+ .strip{grid-template-columns:repeat(2,1fr)}
+ .grid2{grid-template-columns:1fr}
+ .chain{grid-template-columns:repeat(2,1fr)}
+ .stage:nth-child(2)::after{display:none}
+}
+@media(max-width:820px){
+ .sidebar{width:60px}
+ .brand{justify-content:center;padding:0}
+ .brand div:not(.logo),.nav-group,.nav-item span{display:none}
+ .nav-item{justify-content:center;padding:0}
+ .nav{padding:8px 8px}
+ .main{margin-left:60px}
+ .topbar{padding:0 16px}
+ .search input{width:160px}.search kbd{display:none}
+ .page-sub{display:none}
+ .content{padding:18px 16px 48px}
+ .health span{display:none}
+}
+@media(max-width:560px){
+ .strip{grid-template-columns:1fr 1fr}
+ .cell{padding:13px 14px}.cell-value{font-size:24px}
+ .chain{grid-template-columns:1fr}
+ .stage::after{display:none!important}
+ .search{display:none}
+ .workflow{grid-template-columns:repeat(2,1fr);row-gap:14px}
+ .step::after{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+ html{scroll-behavior:auto}
+ *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<aside class="sidebar" aria-label="Primary">
+  <div class="brand">
+    <div class="logo" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+    <div><b>AI Observability</b><small>Edge intelligence platform</small></div>
+  </div>
+  <nav class="nav" id="nav" aria-label="Main navigation"></nav>
+</aside>
+
+<div class="main">
+  <header class="topbar">
+    <div><div class="page-title" id="pageTitle">Infrastructure overview</div><div class="page-sub" id="pageSub">Real-time health across your edge AI environment</div></div>
+    <div class="top-actions">
+      <label class="search"><span class="sr" hidden>Search</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input id="search" type="search" placeholder="Search devices, models, alerts" autocomplete="off" aria-label="Search devices, models and alerts"><kbd>/</kbd>
+      </label>
+      <button class="health" id="health" type="button"></button>
+    </div>
+  </header>
+
+  <main class="content" id="main" tabindex="-1">
+
+    <!-- OVERVIEW -->
+    <section id="page-overview" class="page">
+      <div class="hero">
+        <div><h1 id="greeting">Good afternoon</h1><p id="heroSub"></p></div>
+        <div class="hero-actions">
+          <div class="seg" id="rangeSeg" role="group" aria-label="Time range">
+            <button type="button" data-range="5m" aria-pressed="true">5 min</button>
+            <button type="button" data-range="1h" aria-pressed="false">1 hour</button>
+            <button type="button" data-range="24h" aria-pressed="false">24 hours</button>
+          </div>
+          <button class="btn primary" type="button" data-act="add">Add devices</button>
+        </div>
+      </div>
+
+      <div class="strip" id="stats"></div>
+
+      <div class="grid2">
+        <section class="panel" id="topology-panel" aria-labelledby="topoTitle">
+          <div class="panel-head">
+            <div><h2 class="panel-title" id="topoTitle">Live infrastructure topology</h2><p class="panel-desc">Select a device or workload to inspect it. Moving dashes show live traffic.</p></div>
+            <div class="legend"><span><i class="d"></i>Healthy</span><span><i class="d warn"></i>Degraded</span></div>
+          </div>
+          <div class="topo-scroll"><div class="topo" id="topo"><svg class="topo-svg" id="topoSvg" aria-hidden="true"></svg><div id="nodes"></div></div></div>
+        </section>
+
+        <section class="panel" id="incidents-panel" aria-labelledby="incTitle" style="display:flex;flex-direction:column">
+          <div class="panel-head"><div><h2 class="panel-title" id="incTitle">Active incidents</h2><p class="panel-desc">Issues that need attention</p></div></div>
+          <div id="incList"></div>
+          <div class="note" style="margin-top:auto"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg>AI groups related signals into a single incident.</div>
+        </section>
+      </div>
+
+      <h2 class="section-title" id="resTitle">Fleet resources</h2>
+      <div class="strip" id="resources" style="margin-bottom:0"></div>
+
+      <section class="panel insight" id="insight-panel" aria-labelledby="insightTitle">
+        <span class="tag"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg>AI insight</span>
+        <h2 id="insightTitle">GPU thermal throttling may be causing higher inference latency on EDGE-02</h2>
+        <p>GPU temperature reached 88 °C while utilization stayed above 95%. The GPU clock dropped 18%, which lines up with a 74% rise in YOLOv11 inference latency over the last 30 minutes.</p>
+        <div class="chain" id="chain"></div>
+        <div class="actions">
+          <button class="btn primary" type="button" data-ent="edge02">Investigate EDGE-02</button>
+          <button class="btn" type="button" data-act="askai">Ask AI</button>
+        </div>
+      </section>
+
+      <section class="panel" id="workloads-panel" style="margin-top:16px" aria-labelledby="wlTitle">
+        <div class="panel-head"><div><h2 class="panel-title" id="wlTitle">AI workload performance</h2><p class="panel-desc" id="wlDesc">Live model performance across the fleet</p></div></div>
+        <div class="table-wrap"><table class="table">
+          <thead><tr><th>Model</th><th>Device</th><th class="num">FPS</th><th class="num">P95 latency</th><th>GPU share</th><th>Status</th></tr></thead>
+          <tbody id="wlBody"></tbody>
+        </table></div>
+      </section>
+    </section>
+
+    <!-- DEVICES -->
+    <section id="page-devices" class="page" hidden>
+      <div class="hero"><div><h1>Devices</h1><p>Every device the platform monitors, with the ones that need attention first.</p></div>
+        <div class="hero-actions"><button class="btn primary" type="button" data-act="add">Add devices</button></div></div>
+      <section class="panel" aria-label="Device list">
+        <div class="chips" id="devChips" role="group" aria-label="Filter devices">
+          <button class="chip" type="button" data-filter="all" aria-pressed="true">All</button>
+          <button class="chip" type="button" data-filter="attention" aria-pressed="false">Needs attention</button>
+        </div>
+        <div class="table-wrap"><table class="table">
+          <thead><tr><th>Device</th><th>IP address</th><th>Type</th><th>GPU</th><th class="num">Temp</th><th>Status</th></tr></thead>
+          <tbody id="devBody"></tbody>
+        </table></div>
+        <div class="table-foot" id="devFoot"></div>
+      </section>
+    </section>
+
+    <!-- DISCOVERY -->
+    <section id="page-discovery" class="page" hidden>
+      <div class="hero"><div><h1>Network discovery</h1><p>Find devices first, review them, then approve onboarding.</p></div>
+        <div class="hero-actions"><button class="btn primary" type="button" id="scanBtn">Start network scan</button></div></div>
+      <section class="panel" aria-label="Device onboarding">
+        <div class="panel-body" id="discBody"></div>
+      </section>
+    </section>
+
+    <!-- STUB -->
+    <section id="page-stub" class="page" hidden>
+      <div class="stub">
+        <div><div class="big" id="stubIcon"></div>
+        <h1 id="stubTitle">Not built yet</h1>
+        <p>This view isn't part of the prototype yet. Overview, Devices and Discovery are working.</p>
+        <button class="btn primary" type="button" data-go="overview">Back to overview</button></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="mask" id="mask" hidden></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="dTitle" aria-hidden="true" tabindex="-1">
+  <div class="drawer-head"><h2 id="dTitle">Details</h2><button class="icon-btn" id="dClose" type="button" aria-label="Close details">×</button></div>
+  <div class="drawer-body" id="dBody"></div>
+</aside>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ================= helpers ================= */
+const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+const IC={
+ grid:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>',
+ network:'<circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M12 7.5v4M12 11.5l-5.5 5.5M12 11.5l5.5 5.5"/>',
+ server:'<rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/>',
+ cpu:'<rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/>',
+ chart:'<path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/>',
+ list:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+ activity:'<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+ clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+ bell:'<path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/>',
+ sparkles:'<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/>',
+ branch:'<circle cx="6" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="9" r="2"/><path d="M6 7v10M18 11c0 4-6 3-12 6"/>',
+ message:'<path d="M21 12a8 8 0 01-11.6 7.1L3 21l1.9-5.4A8 8 0 1121 12z"/>',
+ search:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
+ plug:'<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/>',
+ link:'<path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/>',
+ file:'<path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>',
+ gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>',
+ globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>',
+ robot:'<rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4v4M9 14h.01M15 14h.01M2 13v3M22 13v3"/>',
+ camera:'<path d="M4 8h3l2-3h6l2 3h3a1 1 0 011 1v9a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z"/><circle cx="12" cy="13" r="3.5"/>',
+ cube:'<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/>',
+ check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>'
+};
+const ico=(n,s=18,sw=1.7)=>`<svg class="ico" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]||''}</svg>`;
+
+function spark(data,{color='#15803d',min,max,h=36,fill=true}={}){
+ const lo=min??Math.min(...data),hi=max??Math.max(...data),rg=(hi-lo)||1,W=100;
+ const pts=data.map((v,i)=>[i/(data.length-1)*W,h-2-((v-lo)/rg)*(h-4)]);
+ const line=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(2)+' '+p[1].toFixed(2)).join('');
+ return `<svg class="spark" style="height:${h}px" viewBox="0 0 ${W} ${h}" preserveAspectRatio="none" aria-hidden="true">${fill?`<path d="${line}L${W} ${h}L0 ${h}Z" fill="${color}" opacity=".1"/>`:''}<path d="${line}" fill="none" stroke="${color}" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+}
+function series(n,from,to,seed,noise){const r=rng(seed);return Array.from({length:n},(_,i)=>from+(to-from)*(i/(n-1))+(r()-.5)*noise)}
+
+/* ================= data ================= */
+const fleet={total:42,healthy:39,week:3};
+const TONE={healthy:['ok','Healthy'],degraded:['warn','Degraded'],warning:['warn','Warning']};
+
+const ENT={
+ gateway:{name:'Network gateway',sub:'192.168.1.1 · Edge router',icon:'globe',status:'healthy',device:true,ip:'192.168.1.1',type:'Gateway',hw:'Edge router',gpu:null,temp:null,
+  sections:[{label:'Network',rows:[{k:'Uplink',v:'4.2 Gbps',bar:41},{k:'Connected devices',v:'42'},{k:'Packet loss',v:'0.01%'}]}]},
+ edge01:{name:'EDGE-01',sub:'192.168.1.20 · RTX 4090',icon:'server',status:'healthy',device:true,ip:'192.168.1.20',type:'GPU server',hw:'RTX 4090',gpu:62,temp:71,
+  sections:[
+   {label:'Resource utilization',rows:[{k:'CPU',v:'38%',bar:38},{k:'GPU',v:'62%',bar:62},{k:'VRAM',v:'58%',bar:58}]},
+   {label:'GPU telemetry',rows:[{k:'Temperature',v:'71 °C'},{k:'Power',v:'312 W'},{k:'Clock',v:'2,520 MHz'}]},
+   {label:'AI workloads',rows:[{k:'Pose estimator',badge:['ok','Running']},{k:'Segmenter',badge:['ok','Running']}]}],
+  spark:{label:'GPU temperature, last 30 minutes',data:series(40,69,71,3,1.6),unit:'°C'}},
+ edge02:{name:'EDGE-02',sub:'192.168.1.32 · RTX A6000',icon:'server',status:'degraded',device:true,ip:'192.168.1.32',type:'GPU server',hw:'RTX A6000',gpu:94,temp:88,
+  sections:[
+   {label:'Resource utilization',rows:[{k:'CPU',v:'47%',bar:47},{k:'GPU',v:'94%',bar:94,tone:'warn'},{k:'VRAM',v:'81%',bar:81}]},
+   {label:'GPU telemetry',rows:[{k:'Temperature',v:'88 °C',tone:'warn'},{k:'Power',v:'241 W'},{k:'Clock',v:'1,520 MHz',note:'down 18%',tone:'warn'}]},
+   {label:'AI workloads',rows:[{k:'YOLOv11',badge:['warn','Degraded']},{k:'ResNet50',badge:['ok','Running']}]}],
+  spark:{label:'GPU temperature, last 30 minutes',data:null,unit:'°C',color:'#b45309'},
+  analysis:{title:'Possible thermal throttling',text:'Temperature rose while the GPU clock and model performance fell. Check airflow and fan curves first.',conf:92}},
+ edge03:{name:'EDGE-03',sub:'192.168.1.24 · RTX 3090',icon:'server',status:'degraded',device:true,ip:'192.168.1.24',type:'GPU server',hw:'RTX 3090',gpu:17,temp:59,
+  sections:[
+   {label:'Resource utilization',rows:[{k:'CPU',v:'91%',bar:91,tone:'warn'},{k:'GPU',v:'17%',bar:17},{k:'VRAM',v:'22%',bar:22}]},
+   {label:'AI workloads',rows:[{k:'OCR Pipeline',badge:['warn','Degraded']}]}],
+  analysis:{title:'Latency is CPU-bound',text:'OCR P95 latency is 86 ms against an 80 ms target while the GPU sits at 17%. CPU is at 91%, which points to preprocessing rather than the GPU.',conf:71}},
+ edge04:{name:'EDGE-04',sub:'192.168.1.28 · RTX 6000 Ada',icon:'server',status:'warning',device:true,ip:'192.168.1.28',type:'GPU server',hw:'RTX 6000 Ada',gpu:78,temp:74,
+  sections:[
+   {label:'Resource utilization',rows:[{k:'CPU',v:'36%',bar:36},{k:'GPU',v:'78%',bar:78},{k:'VRAM',v:'69%',bar:69},{k:'Disk',v:'83%',bar:83,tone:'warn'}]},
+   {label:'AI workloads',rows:[{k:'Vision LLM',badge:['ok','Running']}]}],
+  analysis:{title:'Disk is filling steadily',text:'Usage passed 80% and is growing about 1.5% per day. At that rate the disk is full in roughly 11 days.',conf:84}},
+ robot01:{name:'ROBOT-01',sub:'192.168.1.40 · Jetson AGX',icon:'robot',status:'healthy',device:true,ip:'192.168.1.40',type:'Robot',hw:'Jetson AGX',gpu:58,temp:54,
+  sections:[
+   {label:'Resource utilization',rows:[{k:'CPU',v:'44%',bar:44},{k:'GPU',v:'58%',bar:58},{k:'Memory',v:'49%',bar:49}]},
+   {label:'AI workloads',rows:[{k:'VLA policy',badge:['ok','Running']}]}]},
+ cams:{name:'Camera cluster',sub:'4 streams · Vision',icon:'camera',status:'healthy',
+  sections:[{label:'Streams',rows:[{k:'Online',v:'4 of 4'},{k:'Frame rate',v:'30 FPS'},{k:'Dropped frames',v:'0.2%'}]}]},
+ yolo:{name:'YOLOv11',sub:'Runs on EDGE-02 · AI model',icon:'cube',status:'degraded',
+  sections:[{label:'Performance',rows:[{k:'Throughput',v:'31.4 FPS'},{k:'P95 latency',v:'49 ms',note:'up 74%',tone:'warn'},{k:'GPU share',v:'41%',bar:41}]}],
+  analysis:{title:"Latency follows EDGE-02's GPU clock",text:'Inference slowed after the GPU clock dropped on its host.',conf:92,link:'edge02'}},
+ vla:{name:'VLA policy',sub:'Runs on ROBOT-01 · AI model',icon:'sparkles',status:'healthy',
+  sections:[{label:'Performance',rows:[{k:'Control rate',v:'10 Hz'},{k:'Inference latency',v:'62 ms'},{k:'GPU share',v:'58%',bar:58}]}]}
+};
+ENT.edge02.spark.data=series(40,72,88,5,1.2);
+const DEVICE_ORDER=['edge02','edge03','edge04','edge01','robot01','gateway'];
+
+const WORK=[
+ {model:'YOLOv11',task:'Vision detection',dev:'edge02',fps:'31.4',p95:'49 ms',gpu:41,status:['warn','Degraded']},
+ {model:'ResNet50',task:'Classification',dev:'edge02',fps:'118',p95:'9 ms',gpu:22,status:['ok','Running']},
+ {model:'OCR Pipeline',task:'Text recognition',dev:'edge03',fps:'11.3',p95:'86 ms',gpu:17,status:['warn','Degraded']},
+ {model:'Vision LLM',task:'Image reasoning',dev:'edge04',fps:'—',p95:'1.2 s',gpu:78,status:['ok','Running']},
+ {model:'Pose estimator',task:'Pose tracking',dev:'edge01',fps:'44.0',p95:'21 ms',gpu:28,status:['ok','Running']},
+ {model:'Segmenter',task:'Segmentation',dev:'edge01',fps:'19.2',p95:'52 ms',gpu:34,status:['ok','Running']},
+ {model:'VLA policy',task:'Robot control',dev:'robot01',fps:'10.0',p95:'62 ms',gpu:58,status:['ok','Running']}
+];
+const INCIDENTS=[
+ {sev:'critical',title:'GPU thermal throttling',where:'EDGE-02',when:'4 min ago',ent:'edge02'},
+ {sev:'warning',title:'Model latency increasing',where:'EDGE-03',when:'8 min ago',ent:'edge03'},
+ {sev:'warning',title:'Disk capacity above 80%',where:'EDGE-04',when:'16 min ago',ent:'edge04'}
+];
+const TOPO=[
+ {id:'gateway',x:50,y:20,label:'Gateway',icon:'globe',sub:'Healthy'},
+ {id:'edge01',x:18,y:150,label:'EDGE-01',icon:'server',sub:'Healthy'},
+ {id:'edge02',x:50,y:150,label:'EDGE-02',icon:'server',sub:'Degraded'},
+ {id:'robot01',x:82,y:150,label:'ROBOT-01',icon:'robot',sub:'Healthy'},
+ {id:'cams',x:18,y:290,label:'Cameras',icon:'camera',sub:'4 streams',sm:1},
+ {id:'yolo',x:50,y:290,label:'YOLOv11',icon:'cube',sub:'31 FPS',sm:1},
+ {id:'vla',x:82,y:290,label:'VLA policy',icon:'sparkles',sub:'10 Hz',sm:1}
+];
+const EDGES=[['gateway','edge01',0],['gateway','edge02',1],['gateway','robot01',0],['edge01','cams',0],['edge02','yolo',1],['robot01','vla',0]];
+
+/* ================= state ================= */
+let q='',range='5m',devFilter='all',currentPage='overview',currentNav='overview',lastTrigger=null;
+const hit=(...f)=>!q.trim()||f.join(' ').toLowerCase().includes(q.trim().toLowerCase());
+const emptyMsg=()=>`<p class="empty">No matches for “${esc(q)}”. Try a device name, model, or IP address.</p>`;
+const nameOf=id=>ENT[id]?.name||id;
+
+/* ================= navigation ================= */
+const NAV=[
+ {g:'Core',items:[
+  {id:'overview',label:'Overview',icon:'grid',page:'overview'},
+  {id:'topology',label:'Topology',icon:'network',page:'overview',scroll:'topology-panel'},
+  {id:'devices',label:'Devices',icon:'server',page:'devices'},
+  {id:'workloads',label:'AI workloads',icon:'cpu',page:'overview',scroll:'workloads-panel'}]},
+ {g:'Observability',items:[
+  {id:'metrics',label:'Metrics',icon:'chart',page:'stub'},{id:'logs',label:'Logs',icon:'list',page:'stub'},
+  {id:'traces',label:'Traces',icon:'activity',page:'stub'},{id:'events',label:'Events',icon:'clock',page:'stub'}]},
+ {g:'Intelligence',items:[
+  {id:'alerts',label:'Alerts',icon:'bell',page:'overview',scroll:'incidents-panel'},
+  {id:'insights',label:'AI insights',icon:'sparkles',page:'overview',scroll:'insight-panel'},
+  {id:'rootcause',label:'Root cause',icon:'branch',page:'stub'},{id:'ask',label:'Ask AI',icon:'message',page:'stub'}]},
+ {g:'Management',items:[
+  {id:'discovery',label:'Discovery',icon:'search',page:'discovery'},{id:'agents',label:'Agents',icon:'plug',page:'stub'},
+  {id:'integrations',label:'Integrations',icon:'link',page:'stub'},{id:'reports',label:'Reports',icon:'file',page:'stub'},
+  {id:'settings',label:'Settings',icon:'gear',page:'stub'}]}
+];
+const NAVMAP={};NAV.forEach(g=>g.items.forEach(i=>NAVMAP[i.id]=i));
+$('#nav').innerHTML=NAV.map(g=>`<div class="nav-group">${g.g}</div>`+g.items.map(i=>`<button class="nav-item" type="button" data-nav="${i.id}" title="${i.label}" aria-label="${i.label}">${ico(i.icon,18)}<span>${i.label}</span></button>`).join('')).join('');
+
+const PAGES={
+ overview:['Infrastructure overview','Real-time health across your edge AI environment'],
+ devices:['Devices','Every device the platform monitors'],
+ discovery:['Network discovery','Find devices, review them, then approve onboarding'],
+ stub:['','']
+};
+function go(page,{nav,scroll,stub}={}){
+ currentPage=page;currentNav=nav||page;
+ $$('.page').forEach(p=>p.hidden=p.id!=='page-'+page);
+ const meta=PAGES[page];
+ $('#pageTitle').textContent=page==='stub'?(stub||'Coming soon'):meta[0];
+ $('#pageSub').textContent=page==='stub'?'Not available in this prototype':meta[1];
+ if(page==='stub'){$('#stubTitle').textContent=`${stub} isn't built yet`;$('#stubIcon').innerHTML=ico(NAVMAP[nav]?.icon||'grid',26)}
+ $$('.nav-item').forEach(b=>{if(b.dataset.nav===currentNav)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
+ if(page==='overview')requestAnimationFrame(drawEdges);
+ if(scroll){requestAnimationFrame(()=>$('#'+scroll).scrollIntoView({behavior:'smooth',block:'start'}))}else window.scrollTo({top:0});
+ renderFiltered();
+}
+function navTo(id){const n=NAVMAP[id];go(n.page,{nav:id,scroll:n.scroll,stub:n.label})}
+
+/* ================= overview renders ================= */
+function counts(){const crit=INCIDENTS.filter(i=>i.sev==='critical').length;return{crit,warn:INCIDENTS.length-crit}}
+function renderHero(){
+ const h=new Date().getHours();
+ $('#greeting').textContent=h<12?'Good morning':h<18?'Good afternoon':'Good evening';
+ const {crit,warn}=counts();
+ const parts=[];if(crit)parts.push(`${crit} critical issue${crit>1?'s':''}`);if(warn)parts.push(`${warn} warning${warn>1?'s':''}`);
+ $('#heroSub').textContent=parts.length?`${parts.join(' and ')} need${crit+warn===1?'s':''} attention. Everything else is running normally.`:'Everything is running normally.';
+}
+function renderHealth(){
+ const {crit,warn}=counts(),b=$('#health');
+ if(crit){b.className='health bad';b.innerHTML=`<i></i><span>${crit} critical issue${crit>1?'s':''}</span>`}
+ else if(warn){b.className='health';b.innerHTML=`<i></i><span>${warn} warning${warn>1?'s':''}</span>`}
+ else{b.className='health';b.innerHTML='<i></i><span>All systems operational</span>'}
+}
+function renderStats(){
+ const {crit,warn}=counts(),deg=WORK.filter(w=>w.status[0]==='warn').length;
+ $('#stats').innerHTML=[
+  ['Devices',fleet.total,`+${fleet.week} this week`,'up'],
+  ['Healthy devices',fleet.healthy,`${(fleet.healthy/fleet.total*100).toFixed(1)}% of fleet`,'up'],
+  ['Active issues',INCIDENTS.length,`${crit} critical, ${warn} warning${warn===1?'':'s'}`,crit?'bad':'warn'],
+  ['AI models running',WORK.length,`${WORK.length-deg} healthy, ${deg} degraded`,deg?'warn':'up']
+ ].map(c=>`<div class="cell"><div class="cell-label">${c[0]}</div><div class="cell-value">${c[1]}</div><div class="cell-note ${c[3]}">${c[2]}</div></div>`).join('');
+}
+function renderIncidents(){
+ const list=INCIDENTS.filter(i=>hit(i.title,i.where,i.sev));
+ $('#incList').innerHTML=list.length?list.map(i=>`<button class="incident" type="button" data-ent="${i.ent}"><span class="sev ${i.sev}" aria-hidden="true"></span><span class="inc-main"><span class="inc-title">${esc(i.title)}</span><span class="inc-meta"><span>${esc(i.where)}</span><span>${esc(i.when)}</span></span></span><span class="badge ${i.sev==='critical'?'bad':'warn'}">${i.sev==='critical'?'Critical':'Warning'}</span></button>`).join(''):emptyMsg();
+}
+function renderTopology(){
+ $('#nodes').innerHTML=TOPO.map(n=>{
+  const e=ENT[n.id],tone=e.status==='healthy'?'':'warn';
+  const dim=q.trim()&&!hit(n.label,e.name,e.sub)?' dim':'';
+  const isDev=e.device;
+  const sub=isDev?`<i class="d ${tone}"></i>${TONE[e.status][1]}`:n.sub;
+  return `<button class="node${n.sm?' sm':''}${e.status!=='healthy'&&isDev?' degraded':''}${dim}" type="button" id="node-${n.id}" style="left:${n.x}%;top:${n.y}px" data-ent="${n.id}" aria-label="${esc(e.name)}, ${TONE[e.status][1]}"><span class="ico-wrap">${ico(n.icon,22)}</span><span class="node-name">${esc(n.label)}</span><span class="node-sub">${sub}</span></button>`;
+ }).join('');
+ drawEdges();
+}
+function drawEdges(){
+ const topo=$('#topo'),svg=$('#topoSvg');if(!topo)return;
+ const tb=topo.getBoundingClientRect();if(!tb.width)return;
+ svg.setAttribute('viewBox',`0 0 ${tb.width} ${tb.height}`);
+ svg.innerHTML=EDGES.map(([a,b,w])=>{
+  const A=$('#node-'+a),B=$('#node-'+b);if(!A||!B)return'';
+  const ra=A.getBoundingClientRect(),rb=B.getBoundingClientRect();
+  const x1=ra.left+ra.width/2-tb.left,y1=ra.bottom-tb.top,x2=rb.left+rb.width/2-tb.left,y2=rb.top-tb.top,ym=(y1+y2)/2;
+  return `<path class="edge${w?' warn':''}" d="M${x1} ${y1}C${x1} ${ym} ${x2} ${ym} ${x2} ${y2}"/>`;
+ }).join('');
+}
+
+/* --- resources (live) --- */
+const RANGE={'5m':{label:'last 5 minutes',seed:11,vol:1},'1h':{label:'last hour',seed:23,vol:1.7},'24h':{label:'last 24 hours',seed:37,vol:2.6}};
+const RES=[
+ {id:'gpu',label:'GPU utilization',base:71,vol:5,sub:()=>'across 14 GPUs'},
+ {id:'cpu',label:'CPU utilization',base:52,vol:4,sub:()=>'normal range'},
+ {id:'mem',label:'Memory',base:64,vol:1.2,sub:v=>`${Math.round(v*2.4)} of 240 GB`},
+ {id:'net',label:'Network',base:41,vol:7,sub:v=>`${(v/10).toFixed(1)} of 10 Gbps`}
+];
+let tickRng=rng(99);
+function seedSeries(){
+ const r=rng(RANGE[range].seed);
+ RES.forEach((m,k)=>{
+  let v=m.base+(k===0?-5:0);m.data=[];
+  for(let i=0;i<30;i++){v=clamp(v+(r()-.5)*m.vol*RANGE[range].vol*1.5+(m.base-v)*.1,6,97);m.data.push(v)}
+  m.data[29]=m.base;
+ });
+}
+function renderResources(){
+ $('#resTitle').textContent=`Fleet resources, ${RANGE[range].label}`;
+ $('#resources').innerHTML=RES.map(m=>{
+  const v=m.data[m.data.length-1],d=Math.round(v-m.data[0]);
+  return `<div class="cell"><div class="res-label"><span>${m.label}</span><span class="res-delta ${d>0?'up':d<0?'down':''}">${d>0?'+':''}${d} pts</span></div><div class="res-value">${Math.round(v)}%</div>${spark(m.data,{min:0,max:100,h:38})}<div class="cell-note">${m.sub(v)}</div></div>`;
+ }).join('');
+}
+function tick(){
+ if(document.hidden||currentPage!=='overview')return;
+ RES.forEach(m=>{const last=m.data[m.data.length-1];m.data.push(clamp(last+(tickRng()-.5)*m.vol*1.6+(m.base-last)*.15,6,97));m.data.shift()});
+ renderResources();
+}
+
+/* --- insight chain --- */
+const SER=(()=>{
+ const N=40,r=rng(7),t=i=>i/(N-1);
+ const load=Array.from({length:N},(_,i)=>82+14*Math.min(1,t(i)/.25)+(r()-.5)*2.4);
+ const temp=Array.from({length:N},(_,i)=>70+18*Math.pow(t(i),.85)+(r()-.5)*1.1);
+ const clock=Array.from({length:N},(_,i)=>t(i)<.5?1855+(r()-.5)*14:1855-335*Math.pow((t(i)-.5)/.5,.9)+(r()-.5)*10);
+ const lat=Array.from({length:N},(_,i)=>28+(t(i)<.55?0:20.72*Math.pow((t(i)-.55)/.45,1.1))+(r()-.5)*1.1);
+ load[0]=82;load[N-1]=96;temp[0]=70;temp[N-1]=88;clock[0]=1855;clock[N-1]=1520;lat[0]=28;lat[N-1]=48.72;
+ return{load,temp,clock,lat};
+})();
+function renderChain(){
+ const L=a=>a[a.length-1],F=a=>a[0],pct=(a)=>Math.round((L(a)/F(a)-1)*100);
+ const st=[
+  {l:'GPU load',v:Math.round(L(SER.load))+'%',d:`from ${Math.round(F(SER.load))}%`,s:SER.load,c:'#66726a',flat:1},
+  {l:'Temperature',v:Math.round(L(SER.temp))+' °C',d:`from ${Math.round(F(SER.temp))} °C`,s:SER.temp,c:'#b45309'},
+  {l:'GPU clock',v:Math.round(L(SER.clock)).toLocaleString('en-US')+' MHz',d:`down ${Math.abs(pct(SER.clock))}%`,s:SER.clock,c:'#b45309'},
+  {l:'YOLOv11 P95 latency',v:Math.round(L(SER.lat))+' ms',d:`up ${pct(SER.lat)}%`,s:SER.lat,c:'#b45309'}
+ ];
+ $('#chain').innerHTML=st.map(s=>`<div class="stage"><div class="stage-label">${s.l}</div><div class="stage-value">${s.v}</div><div class="stage-delta ${s.flat?'flat':''}">${s.d}</div>${spark(s.s,{color:s.c,h:34})}</div>`).join('');
+}
+function renderWorkloads(){
+ const rows=WORK.filter(w=>hit(w.model,w.task,nameOf(w.dev),w.status[1]));
+ $('#wlBody').innerHTML=rows.length?rows.map(w=>`<tr data-ent="${w.dev}"><td><div class="dev"><div class="dev-icon">${ico('cube',16)}</div><div><b>${esc(w.model)}</b><small>${esc(w.task)}</small></div></div></td><td><button class="linklike" type="button" data-ent="${w.dev}">${esc(nameOf(w.dev))}</button></td><td class="num">${w.fps}</td><td class="num">${w.p95}</td><td><div class="minibar"><i style="--w:${w.gpu}%"></i>${w.gpu}%</div></td><td><span class="badge ${w.status[0]}"><i></i>${w.status[1]}</span></td></tr>`).join(''):`<tr><td colspan="6">${emptyMsg()}</td></tr>`;
+}
+
+/* ================= devices page ================= */
+function renderDevices(){
+ $$('#devChips .chip').forEach(c=>c.setAttribute('aria-pressed',c.dataset.filter===devFilter));
+ const ids=Object.keys(ENT).filter(id=>ENT[id].device).sort((a,b)=>{
+  const ia=DEVICE_ORDER.indexOf(a),ib=DEVICE_ORDER.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib)});
+ const rows=ids.filter(id=>{const e=ENT[id];return (devFilter==='all'||e.status!=='healthy')&&hit(e.name,e.ip,e.type,e.hw,TONE[e.status][1])});
+ $('#devBody').innerHTML=rows.length?rows.map(id=>{
+  const e=ENT[id],t=TONE[e.status];
+  const gpu=e.gpu==null?'<span style="color:var(--muted)">—</span>':`<div class="minibar"><i class="${e.gpu>90?'warn':''}" style="--w:${e.gpu}%"></i>${e.gpu}%</div>`;
+  return `<tr data-ent="${id}"><td><div class="dev"><div class="dev-icon">${ico(e.icon,16)}</div><div><button class="linklike" type="button" data-ent="${id}">${esc(e.name)}</button><small>${esc(e.hw)}</small></div></div></td><td class="mono">${esc(e.ip)}</td><td>${esc(e.type)}</td><td>${gpu}</td><td class="num">${e.temp==null?'—':e.temp+' °C'}</td><td><span class="badge ${t[0]}"><i></i>${t[1]}</span></td></tr>`;
+ }).join(''):`<tr><td colspan="6">${q.trim()?emptyMsg():'<p class="empty">Nothing needs attention right now.</p>'}</td></tr>`;
+ $('#devFoot').textContent=`Showing ${rows.length} of ${fleet.total} devices. The rest of the fleet is collapsed in this prototype.`;
+}
+
+/* ================= drawer ================= */
+function openEntity(id,trigger){
+ const e=ENT[id];if(!e)return;
+ lastTrigger=trigger||document.activeElement;
+ const t=TONE[e.status],warn=e.status!=='healthy';
+ let h=`<div class="profile"><div class="profile-icon ${warn?'warn':''}">${ico(e.icon,24)}</div><div><b id="dName">${esc(e.name)}</b><small>${esc(e.sub)}</small></div></div><div style="margin-top:14px"><span class="badge ${t[0]}"><i></i>${t[1]}</span></div>`;
+ (e.sections||[]).forEach(s=>{
+  h+=`<div class="d-section"><div class="d-label">${esc(s.label)}</div>`;
+  s.rows.forEach(r=>{
+   const val=r.badge?`<span class="badge ${r.badge[0]}"><i></i>${r.badge[1]}</span>`:`<b class="${r.tone||''}">${esc(r.v)}${r.note?`<small>${esc(r.note)}</small>`:''}</b>`;
+   h+=`<div class="d-row"><span>${esc(r.k)}</span>${val}</div>`;
+   if(r.bar!=null)h+=`<div class="mini"><i class="${r.tone||''}" style="width:${r.bar}%"></i></div>`;
+  });
+  h+='</div>';
+ });
+ if(e.spark){const d=e.spark.data;h+=`<div class="d-section"><div class="d-label">${esc(e.spark.label)}</div>${spark(d,{color:e.spark.color||'#15803d',h:56})}<div class="d-row"><span>${Math.round(d[0])} ${e.spark.unit}</span><span>${Math.round(d[d.length-1])} ${e.spark.unit} now</span></div></div>`}
+ h+='<div class="d-section"><div class="d-label">AI analysis</div>';
+ if(e.analysis)h+=`<div class="analysis"><b>${esc(e.analysis.title)}</b><p>${esc(e.analysis.text)}</p><small>Confidence ${e.analysis.conf}%</small></div>`;
+ else h+=`<div class="analysis plain">${esc(e.note||'No anomalies detected in the last hour.')}</div>`;
+ h+='</div><div class="drawer-actions">';
+ if(e.analysis?.link)h+=`<button class="btn primary" type="button" data-ent="${e.analysis.link}">Open ${esc(nameOf(e.analysis.link))}</button>`;
+ if(e.device)h+=`<button class="btn primary" type="button" data-act="viewdev" data-name="${esc(e.name)}">View in Devices</button>`;
+ h+='</div>';
+ $('#dBody').innerHTML=h;
+ $('#dTitle').textContent=e.device?'Device details':'Details';
+ $('#mask').hidden=false;
+ const d=$('#drawer');d.classList.add('open');d.setAttribute('aria-hidden','false');
+ setTimeout(()=>$('#dClose').focus(),30);
+}
+function closeDrawer(){
+ const d=$('#drawer');if(!d.classList.contains('open'))return;
+ d.classList.remove('open');d.setAttribute('aria-hidden','true');$('#mask').hidden=true;
+ if(lastTrigger&&document.contains(lastTrigger))lastTrigger.focus();
+}
+$('#drawer').addEventListener('keydown',e=>{
+ if(e.key!=='Tab')return;
+ const f=$$('button',$('#drawer')).filter(x=>!x.disabled);if(!f.length)return;
+ const a=f[0],b=f[f.length-1];
+ if(e.shiftKey&&document.activeElement===a){e.preventDefault();b.focus()}
+ else if(!e.shiftKey&&document.activeElement===b){e.preventDefault();a.focus()}
+});
+
+/* ================= discovery ================= */
+const HOSTS=[
+ {id:'edge05',name:'EDGE-05',ip:'192.168.1.44',type:'GPU server',hw:'RTX 4090',ports:'22, 8000',ready:true,icon:'server'},
+ {id:'edge06',name:'EDGE-06',ip:'192.168.1.46',type:'GPU server',hw:'RTX A6000',ports:'22, 8080',ready:true,icon:'server'},
+ {id:'robot02',name:'ROBOT-02',ip:'192.168.1.41',type:'Robot',hw:'Jetson AGX',ports:'22, 9090',ready:true,icon:'robot'},
+ {id:'camhub02',name:'CAM-HUB-02',ip:'192.168.1.60',type:'Camera hub',hw:'4 RTSP streams',ports:'554, 8554',ready:true,icon:'camera'},
+ {id:'jetson07',name:'JETSON-07',ip:'192.168.1.52',type:'Edge module',hw:'Jetson Orin',ports:'22',ready:false,why:'Agent port 8000 is closed',icon:'cpu'},
+ {id:'host77',name:'Unknown device',ip:'192.168.1.77',type:'Unknown',hw:'—',ports:'80',ready:false,why:'Device type not recognized',icon:'search'}
+];
+const D={state:'idle',pct:0,shown:0,avail:[],sel:new Set(),enrolled:new Set(),lastCount:0,timer:null};
+const STEPS=[['Discover','Scan the network'],['Review','Inspect what was found'],['Approve','Choose what to enroll'],['Enroll','Connect the agent']];
+const ACTIVE={idle:0,scanning:0,review:1,approving:2,enrolling:3,done:4};
+
+function startScan(){
+ if(['scanning','approving','enrolling'].includes(D.state))return;
+ D.state='scanning';D.pct=0;D.shown=0;D.sel=new Set();D.lastCount=0;
+ D.avail=HOSTS.filter(h=>!D.enrolled.has(h.id));
+ clearInterval(D.timer);
+ D.timer=setInterval(()=>{
+  D.pct=Math.min(100,D.pct+Math.floor(Math.random()*6)+4);
+  D.shown=Math.floor(D.avail.length*Math.min(1,D.pct/85));
+  if(D.pct>=100){clearInterval(D.timer);D.state='review';D.shown=D.avail.length;D.avail.forEach(h=>{if(h.ready)D.sel.add(h.id)})}
+  renderDiscovery();
+ },200);
+ renderDiscovery();
+}
+function approve(){
+ const ids=[...D.sel];if(!ids.length)return;
+ D.state='approving';renderDiscovery();
+ setTimeout(()=>{D.state='enrolling';renderDiscovery();
+  setTimeout(()=>{
+   ids.forEach(id=>{
+    const h=HOSTS.find(x=>x.id===id);D.enrolled.add(id);
+    ENT[id]={name:h.name,sub:`${h.ip} · ${h.hw}`,icon:h.icon,status:'healthy',device:true,ip:h.ip,type:h.type,hw:h.hw,gpu:null,temp:null,
+     sections:[{label:'Agent',rows:[{k:'Connection',v:'Connected'},{k:'Enrolled',v:'Just now'}]}],note:'The agent is collecting baseline metrics. Insights start after the first hour.'};
+   });
+   fleet.total+=ids.length;fleet.healthy+=ids.length;fleet.week+=ids.length;
+   D.lastCount=ids.length;D.sel=new Set();D.state='done';
+   renderAll();toast(`${ids.length} device${ids.length>1?'s':''} enrolled`);
+  },1500);
+ },800);
+}
+function renderDiscovery(){
+ const st=D.state,active=ACTIVE[st],busy=['scanning','approving','enrolling'].includes(st);
+ const btn=$('#scanBtn');btn.disabled=busy;btn.textContent=busy?(st==='scanning'?'Scanning…':'Working…'):(st==='idle'?'Start network scan':'Scan again');
+ const steps=STEPS.map((s,i)=>{const c=i<active?'done':i===active&&st!=='done'?'active':'';return `<div class="step ${c}"><div class="circle">${i<active?ico('check',15,2.4):i+1}</div><b>${s[0]}</b><small>${s[1]}</small></div>`}).join('');
+ const badge=st==='idle'?['neutral','Ready']:st==='scanning'?['warn','Scanning']:st==='approving'||st==='enrolling'?['warn',st==='approving'?'Approving':'Enrolling']:['ok','Complete'];
+ const text=st==='idle'?'Ready to scan':st==='scanning'?'Probing hosts and detecting services…':st==='review'||st==='done'?`Scan complete. ${D.avail.length} new device${D.avail.length===1?'':'s'} found; ${fleet.total-D.lastCount} known device${fleet.total-D.lastCount===1?'':'s'} skipped.`:st==='approving'?'Applying your approvals…':'Connecting agents…';
+ const pct=st==='approving'||st==='enrolling'?100:D.pct;
+ let h=`<div class="workflow">${steps}</div><div class="scan-box"><div class="scan-top"><div><b class="mono">192.168.1.0/24</b><div class="panel-desc">256 addresses, ARP and TCP discovery, service detection on</div></div><span class="badge ${badge[0]}"><i></i>${badge[1]}</span></div><div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}" aria-label="Scan progress"><div style="width:${pct}%"></div></div><div class="scan-meta"><span>${text}</span><span>${pct}%</span></div></div>`;
+ const rows=D.avail.slice(0,D.shown);
+ if(rows.length){
+  const canPick=st==='review',n=D.sel.size;
+  h+=`<div class="found-head"><b>Found on this network</b>${canPick?`<button class="btn primary" type="button" data-act="approve" ${n?'':'disabled'}>Approve ${n} device${n===1?'':'s'}</button>`:''}</div><div class="table-wrap" style="border:1px solid var(--line);border-radius:10px"><table class="table"><thead><tr><th style="width:44px"></th><th>Device</th><th>IP address</th><th>Type</th><th>Services</th><th>Status</th></tr></thead><tbody>`;
+  rows.forEach(r=>{
+   const en=D.enrolled.has(r.id);
+   const b=en?['ok','Enrolled']:r.ready?['ok','Ready']:['warn','Needs review'];
+   h+=`<tr><td><input class="cb" type="checkbox" data-host="${r.id}" ${D.sel.has(r.id)?'checked':''} ${canPick&&!en?'':'disabled'} aria-label="Select ${esc(r.name)}"></td><td><div class="dev"><div class="dev-icon">${ico(r.icon,16)}</div><div><b>${esc(r.name)}</b><small>${esc(r.hw)}</small>${!r.ready&&!en?`<span class="why">${esc(r.why)}</span>`:''}</div></div></td><td class="mono">${esc(r.ip)}</td><td>${esc(r.type)}</td><td class="mono">${esc(r.ports)}</td><td><span class="badge ${b[0]}"><i></i>${b[1]}</span></td></tr>`;
+  });
+  h+='</tbody></table></div>';
+ }else if(st==='review'||st==='done'){h+='<p class="empty">No new devices found on this network.</p>'}
+ if(st==='done'&&D.lastCount)h+=`<div class="done-banner"><span><b>${D.lastCount} device${D.lastCount>1?'s':''} enrolled.</b> They now appear in Devices and the fleet totals.</span><button class="btn" type="button" data-nav="devices">View devices</button></div>`;
+ $('#discBody').innerHTML=h;
+}
+
+/* ================= misc ================= */
+let toastT;
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2800)}
+function renderFiltered(){renderIncidents();renderTopology();renderWorkloads();renderDevices()}
+function renderAll(){renderHero();renderHealth();renderStats();renderResources();renderChain();renderFiltered();renderDiscovery()}
+
+/* ================= events ================= */
+document.addEventListener('click',e=>{
+ const nav=e.target.closest('[data-nav]');if(nav){navTo(nav.dataset.nav);return}
+ const goBtn=e.target.closest('[data-go]');if(goBtn){navTo(goBtn.dataset.go);return}
+ const act=e.target.closest('[data-act]');
+ if(act){
+  const a=act.dataset.act;
+  if(a==='add')navTo('discovery');
+  else if(a==='askai')toast("Ask AI isn't connected in this prototype");
+  else if(a==='approve')approve();
+  else if(a==='viewdev'){const name=act.dataset.name;closeDrawer();q=name;$('#search').value=name;go('devices',{nav:'devices'})}
+  return;
+ }
+ const range_=e.target.closest('[data-range]');
+ if(range_){range=range_.dataset.range;$$('#rangeSeg button').forEach(b=>b.setAttribute('aria-pressed',b===range_));seedSeries();renderResources();return}
+ const chip=e.target.closest('[data-filter]');if(chip){devFilter=chip.dataset.filter;renderDevices();return}
+ const ent=e.target.closest('[data-ent]');if(ent){openEntity(ent.dataset.ent,ent.closest('button')||ent);return}
+ if(e.target.closest('#health')){navTo('alerts');return}
+ if(e.target.id==='mask'||e.target.closest('#dClose'))closeDrawer();
+});
+$('#scanBtn').addEventListener('click',startScan);
+document.addEventListener('change',e=>{
+ const cb=e.target.closest('[data-host]');if(!cb)return;
+ cb.checked?D.sel.add(cb.dataset.host):D.sel.delete(cb.dataset.host);renderDiscovery();
+ const again=$(`[data-host="${cb.dataset.host}"]`);if(again)again.focus();
+});
+$('#search').addEventListener('input',e=>{q=e.target.value;renderFiltered()});
+document.addEventListener('keydown',e=>{
+ if(e.key==='Escape'){if($('#drawer').classList.contains('open'))closeDrawer();else if(q){q='';$('#search').value='';renderFiltered()}}
+ if(e.key==='/'&&!/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)){e.preventDefault();$('#search').focus()}
+});
+window.addEventListener('resize',drawEdges);
+if(window.ResizeObserver)new ResizeObserver(drawEdges).observe($('#topo'));
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(drawEdges);
+
+/* ================= init ================= */
+seedSeries();renderAll();go('overview');
+setInterval(tick,2500);
+</script>
+</body>
+</html>
