@@ -1,0 +1,22 @@
+services:
+  network-scanner:
+    build: .
+    container_name: ai-network-scanner
+    environment:
+      SCAN_CIDR: ${SCAN_CIDR:-192.168.1.0/24}
+      SCAN_INTERVAL: ${SCAN_INTERVAL:-0}
+      PORTS: ${PORTS:-22,53,80,443,445,3389,5000,8000,8001,8080,8081,8088,9000,9100}
+      SCAN_CONCURRENCY: ${SCAN_CONCURRENCY:-128}
+      TCP_TIMEOUT: ${TCP_TIMEOUT:-0.45}
+      HTTP_TIMEOUT: ${HTTP_TIMEOUT:-1.5}
+      MAX_HOSTS: ${MAX_HOSTS:-4096}
+      SSH_USER: ${SSH_USER:-}
+      SSH_KEY_PATH: /run/scanner-ssh/id_ed25519
+    network_mode: host
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    volumes:
+      - ./data:/app/data
+      - ./ssh:/run/scanner-ssh:ro
+    restart: unless-stopped

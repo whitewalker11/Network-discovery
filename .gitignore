@@ -1,0 +1,8 @@
+.env
+ssh/
+.venv/
+__pycache__/
+*.py[cod]
+
+data/*.db
+data/ssh_known_hosts
